@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Szerencsekerék · Student Tech Lab ELTE</title>
+<meta name="description" content="Interaktív szerencsekerék a Student Tech Lab ELTE nyílt napjára.">
+
+<!--
+  LOGÓ: tedd az index.html mellé egy "logo.png" nevű, lehetőleg átlátszó hátterű
+  fájlt — ez adja majd a böngészőfül ikonját, a fejléc logóját ÉS a háttérben
+  megjelenő halvány hatszög-mintát is. Amíg nincs feltöltve a fájl, a fejlécben
+  egy egyszerű helyettesítő hatszög jel látszik, a vízjel-minta pedig üres marad.
+-->
+<link rel="icon" type="image/png" href="logo.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --navy:#012850;        /* elsődleges sötét navy – címsorok, szövegek, kerék */
+    --navy-mid:#1a3d61;    /* footer sáv / másodlagos kerék-szín */
+    --navy-soft:#4d7ea8;   /* halvány, harmadlagos kék árnyalat */
+    --hex-gray:#f2f2f2;    /* vízjel-minta színe */
+    --paper:#ffffff;
+    --ink-muted:#5c6672;
+    --line:#c9d3dc;
+    --radius:16px;
+    --mono:'Space Mono','Consolas',monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    min-height:100svh;
+    background:var(--paper);
+    color:var(--navy);
+    font-family:var(--sans);
+    position:relative;
+  }
+
+  .page{position:relative;min-height:100svh;display:flex;flex-direction:column;}
+
+  /* halvány, ismétlődő logó-vízjel — a valós logo.png fájlból épül fel majd */
+  .hex-watermark{
+    position:absolute; inset:0;
+    background-image:url('logo.png');
+    background-repeat:space;
+    background-size:64px 64px;
+    opacity:0.05;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;flex:1;padding:34px 16px 10px;}
+
+  /* ---------- Fejléc ---------- */
+  header{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+  .logo-mark{width:42px;height:42px;flex:none;display:block;}
+  .logo-fallback{width:42px;height:42px;flex:none;}
+  .brand{display:flex;flex-direction:column;line-height:1.2;}
+  .brand .uni{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--navy-soft);}
+  .brand .lab{font-family:var(--sans);font-weight:800;font-size:19px;color:var(--navy);}
+
+  /* ---------- Instrukció ---------- */
+  .instruction{
+    text-align:center;
+    max-width:480px;
+    margin:14px 0 30px;
+  }
+  .instruction p{
+    margin:0;
+    font-size:19px;
+    font-weight:600;
+    color:var(--navy);
+  }
+  .instruction kbd{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:16px;
+    background:var(--paper);
+    border:2px solid var(--navy);
+    border-bottom-width:4px;
+    border-radius:8px;
+    padding:3px 12px;
+    color:var(--navy);
+    display:inline-block;
+  }
+
+  /* ---------- Kerék ---------- */
+  .wheel-wrap{position:relative;width:min(78vw,400px);aspect-ratio:1/1;margin-bottom:10px;}
+  .pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:34px;height:38px;z-index:3;filter:drop-shadow(0 4px 8px rgba(1,40,80,0.35));}
+  canvas#wheel{width:100%;height:100%;display:block;border-radius:50%;box-shadow:0 18px 44px rgba(1,40,80,0.28);background:var(--paper);}
+  .hub{
+    position:absolute;top:50%;left:50%;width:17%;height:17%;transform:translate(-50%,-50%);
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, var(--navy-soft), var(--navy) 75%);
+    border:3px solid var(--paper);
+    box-shadow:0 0 0 2px var(--navy), 0 6px 14px rgba(1,40,80,0.4);
+    z-index:2;
+  }
+
+  [aria-live]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+
+  /* ---------- Nyeremény popup ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(1,40,80,0.35);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;
+    transition:opacity .25s ease;z-index:10;padding:20px;
+  }
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .prize-card{
+    width:min(90vw,380px);
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:32px 26px 26px;
+    text-align:center;
+    box-shadow:0 30px 70px rgba(1,40,80,0.35);
+    transform:scale(.86) translateY(14px);
+    transition:transform .32s cubic-bezier(.2,1.4,.4,1);
+  }
+  .overlay.show .prize-card{transform:scale(1) translateY(0);}
+  .prize-card .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--navy-soft);margin-bottom:10px;}
+  .prize-card .prize-name{font-family:var(--sans);font-weight:800;font-size:24px;color:var(--navy);line-height:1.25;margin-bottom:18px;}
+  .prize-card .hint{font-family:var(--mono);font-size:11.5px;color:var(--ink-muted);}
+  .prize-card .hint kbd{background:#f3f5f8;border:1px solid var(--line);border-radius:5px;padding:2px 7px;color:var(--navy);}
+
+  /* ---------- Footer (a Student Tech Lab honlap stílusa) ---------- */
+  footer.site-footer{position:relative;z-index:1;margin-top:auto;}
+  .contact{padding:56px 20px 46px;text-align:center;}
+  .contact h2{
+    font-family:var(--sans);
+    font-weight:800;
+    font-size:24px;
+    letter-spacing:.02em;
+    color:var(--navy);
+    margin:0 0 14px;
+  }
+  .contact .rule{width:min(70%,560px);height:2px;background:var(--navy);margin:0 auto 26px;opacity:.85;}
+  .contact .email{font-size:15px;color:var(--ink-muted);margin-bottom:14px;}
+  .contact .email a{color:var(--navy);font-weight:700;text-decoration:none;}
+  .contact .email a:hover{text-decoration:underline;}
+  .socials{font-size:15px;font-weight:700;}
+  .socials a{color:var(--navy);text-decoration:none;}
+  .socials a:hover{text-decoration:underline;}
+  .socials .sep{color:var(--ink-muted);margin:0 10px;font-weight:400;}
+  .copy-bar{background:var(--navy-mid);color:#eef3f8;text-align:center;padding:18px 16px;font-size:14px;}
+
+  a:focus-visible, kbd:focus-visible{outline:2px solid var(--navy-soft);outline-offset:2px;}
+
+  @media (max-width:480px){
+    .brand .lab{font-size:16px;}
+    .instruction p{font-size:17px;}
+    .contact h2{font-size:20px;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hex-watermark" aria-hidden="true"></div>
+
+  <div class="content">
+    <header>
+      <img class="logo-mark" id="logoImg" src="logo.png" alt="Student Tech Lab logó"
+           onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='block';">
+      <svg class="logo-fallback" id="logoFallback" style="display:none" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Student Tech Lab jel">
+        <polygon points="50,4 92,27 92,73 50,96 8,73 8,27" fill="none" stroke="#012850" stroke-width="4"/>
+      </svg>
+      <div class="brand">
+        <span class="uni">ELTE · SAVARIA</span>
+        <span class="lab">Student Tech Lab</span>
+      </div>
+    </header>
+
+    <div class="instruction">
+      <p>Nyomd meg az <kbd>ENTER</kbd> billentyűt a pörgetéshez!</p>
+    </div>
+
+    <div class="wheel-wrap">
+      <svg class="pointer" viewBox="0 0 34 38" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 38 L2 10 Q17 20 32 10 Z" fill="#012850" stroke="#ffffff" stroke-width="1.5"/>
+      </svg>
+      <canvas id="wheel"></canvas>
+      <div class="hub"></div>
+    </div>
+  </div>
+
+  <div aria-live="polite" id="liveRegion"></div>
+
+  <div class="overlay" id="overlay">
+    <div class="prize-card">
+      <div class="kicker">GRATULÁLUNK</div>
+      <div class="prize-name" id="prizeName">—</div>
+      <div class="hint">Nyomj <kbd>ESC</kbd>-et az újrakezdéshez</div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="contact">
+      <h2>KAPCSOLAT</h2>
+      <div class="rule"></div>
+      <div class="email">Email: <a href="mailto:studenttechlab@inf.elte.hu">studenttechlab@inf.elte.hu</a></div>
+      <div class="socials">
+        <!-- cseréld a # jeleket a valódi profil-linkekre -->
+        <a href="#">Facebook</a><span class="sep">|</span><a href="#">Instagram</a><span class="sep">|</span><a href="#">YouTube</a>
+      </div>
+    </div>
+    <div class="copy-bar">© <span id="year"></span> Student Tech Lab ELTE.</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  /* =========================================================
+     KONFIGURÁCIÓ — ide nyúlj, ha testre akarod szabni a kereket
+     ========================================================= */
+  const PRIZES = [
+    { label: "Arduino kezdőkészlet" },
+    { label: "3D nyomtatás – 1 tekercs PLA" },
+    { label: "Forrasztó szett" },
+    { label: "Mentor konzultáció" },
+    { label: "ESP32 fejlesztőpanel" },
+    { label: "Tech Lab póló" },
+    { label: "Extra labor idő" },
+    { label: "FŐDÍJ: Raspberry Pi 5" }
+  ];
+
+  const SPIN_DURATION_MS   = 5200;   // teljes pörgés hossza
+  const ACCEL_TIME_FRACTION= 0.12;   // az idő ekkora hányada a "felpörgés" (gyorsulás)
+  const ACCEL_DIST_FRACTION= 0.045;  // a felpörgés alatt megtett szögtávolság aránya (valósághűen kicsi)
+  const MIN_EXTRA_TURNS    = 5;      // minimum ennyi teljes kör extra pörgetés
+  const MAX_EXTRA_TURNS    = 8;
+
+  /* =========================================================
+     Canvas előkészítés
+     ========================================================= */
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const N = PRIZES.length;
+  const SEG = 360 / N;
+  const COLORS = ["#012850", "#1a3d61"]; // váltakozó navy árnyalatok
+
+  let rotation = 0;
+  let dpr = Math.max(1, window.devicePixelRatio || 1);
+  let size = 0;
+
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    size = rect.width;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    drawWheel();
+  }
+
+  function drawWheel(){
+    const r = size/2;
+    ctx.clearRect(0,0,size,size);
+    ctx.save();
+    ctx.translate(r,r);
+    ctx.rotate(rotation * Math.PI/180);
+
+    for(let i=0;i<N;i++){
+      const start = (i*SEG) * Math.PI/180;
+      const end   = ((i+1)*SEG) * Math.PI/180;
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0,0,r-4, start, end);
+      ctx.closePath();
+      ctx.fillStyle = COLORS[i%2];
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+
+      ctx.save();
+      ctx.rotate(start + (end-start)/2);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "600 " + Math.max(10, r*0.062) + "px Inter, sans-serif";
+      wrapRadialText(PRIZES[i].label, r-18, r*0.30);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function wrapRadialText(text, xStart, maxWidth){
+    const words = text.split(' ');
+    let lines = [];
+    let cur = '';
+    for(const w of words){
+      const test = cur ? cur+' '+w : w;
+      if(ctx.measureText(test).width > maxWidth && cur){
+        lines.push(cur);
+        cur = w;
+      } else {
+        cur = test;
+      }
+    }
+    if(cur) lines.push(cur);
+    const lh = parseInt(ctx.font,10) * 1.15 || 14;
+    const offsetStart = -((lines.length-1)*lh)/2;
+    lines.forEach((line,idx)=>{
+      ctx.fillText(line, xStart, offsetStart + idx*lh);
+    });
+  }
+
+  window.addEventListener('resize', resizeCanvas);
+
+  /* =========================================================
+     Hangeffektek — Web Audio API-val szintetizálva, külső
+     hangfájl nélkül (GitHub Pages-en is gond nélkül fut).
+     ========================================================= */
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playTick(strength){
+    if(!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(900 + strength*300, t);
+    gain.gain.setValueAtTime(0.001, t);
+    gain.gain.exponentialRampToValueAtTime(0.16 + strength*0.06, t+0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t+0.045);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t+0.05);
+  }
+
+  function playWinFanfare(){
+    if(!audioCtx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((f,i)=>{
+      const t = audioCtx.currentTime + i*0.09;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.18, t+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.35);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t+0.4);
+    });
+  }
+
+  /* =========================================================
+     Állapotgép + pörgetés-animáció
+     ========================================================= */
+  const overlay = document.getElementById('overlay');
+  const prizeNameEl = document.getElementById('prizeName');
+  const liveRegion = document.getElementById('liveRegion');
+
+  let state = 'idle';       // 'idle' | 'spinning' | 'result'
+  let rafId = null;
+  let lastTickSeg = null;
+
+  function spinEase(t){
+    if(t <= ACCEL_TIME_FRACTION){
+      const local = t / ACCEL_TIME_FRACTION;
+      return ACCEL_DIST_FRACTION * (local*local);
+    } else {
+      const local = (t - ACCEL_TIME_FRACTION) / (1 - ACCEL_TIME_FRACTION);
+      const decel = 1 - Math.pow(1-local, 4);
+      return ACCEL_DIST_FRACTION + (1-ACCEL_DIST_FRACTION) * decel;
+    }
+  }
+
+  function pointerLocalAngle(rot){
+    return ((270 - rot) % 360 + 360) % 360;
+  }
+
+  function currentSegmentIndex(rot){
+    return Math.floor(pointerLocalAngle(rot) / SEG) % N;
+  }
+
+  function spin(){
+    if(state !== 'idle') return;
+    ensureAudio();
+    state = 'spinning';
+    liveRegion.textContent = 'A kerék pörög…';
+
+    const targetIndex = Math.floor(Math.random()*N);
+    const jitter = (Math.random()-0.5) * SEG * 0.6;
+    const desiredLocal = targetIndex*SEG + SEG/2 + jitter;
+
+    const wantedMod = ((270 - desiredLocal) % 360 + 360) % 360;
+    const currentMod = ((rotation % 360) + 360) % 360;
+    const deltaAlign = ((wantedMod - currentMod) + 360) % 360;
+    const extraTurns = MIN_EXTRA_TURNS + Math.floor(Math.random()*(MAX_EXTRA_TURNS-MIN_EXTRA_TURNS+1));
+    const totalDelta = extraTurns*360 + deltaAlign;
+
+    const startRotation = rotation;
+    const finalRotation = rotation + totalDelta;
+    const startTime = performance.now();
+    lastTickSeg = currentSegmentIndex(rotation);
+
+    function frame(now){
+      const t = Math.min(1, (now-startTime)/SPIN_DURATION_MS);
+      const eased = spinEase(t);
+      rotation = startRotation + totalDelta*eased;
+      drawWheel();
+
+      const seg = currentSegmentIndex(rotation);
+      if(seg !== lastTickSeg){
+        const velocity = 1 - Math.abs(t-ACCEL_TIME_FRACTION);
+        playTick(Math.max(0, Math.min(1, velocity)));
+        lastTickSeg = seg;
+      }
+
+      if(t < 1 && state === 'spinning'){
+        rafId = requestAnimationFrame(frame);
+      } else if(state === 'spinning'){
+        rotation = finalRotation;
+        drawWheel();
+        finishSpin(targetIndex);
+      }
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function finishSpin(targetIndex){
+    state = 'result';
+    playWinFanfare();
+    const prize = PRIZES[targetIndex];
+    prizeNameEl.textContent = prize.label;
+    overlay.classList.add('show');
+    liveRegion.textContent = 'Nyereményed: ' + prize.label;
+  }
+
+  function resetWheel(){
+    if(rafId) cancelAnimationFrame(rafId);
+    state = 'idle';
+    overlay.classList.remove('show');
+    rotation = ((rotation % 360) + 360) % 360;
+    drawWheel();
+    liveRegion.textContent = 'A kerék visszaállt.';
+  }
+
+  window.addEventListener('keydown', function(e){
+    if(e.repeat) return;
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      spin();
+    } else if(e.key === 'Escape'){
+      e.preventDefault();
+      resetWheel();
+    }
+  });
+
+  resizeCanvas();
+})();
+</script>
+</body>
+</html>
