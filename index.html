@@ -45,6 +45,9 @@
 
   .page{position:relative;min-height:100svh;display:flex;flex-direction:column;}
 
+  /* háttérben hulló fogaskerekek/csavarok — figyelemfelkeltő, folyamatosan mozgó elem */
+  #bgFx{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;display:block;}
+
   /* halvány, ismétlődő logó-vízjel — a valós logo.png fájlból épül fel majd */
   .hex-watermark{
     position:absolute; inset:0;
@@ -56,10 +59,10 @@
     z-index:0;
   }
 
-  .content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;flex:1;padding:34px 16px 10px;}
+  .content{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;flex:1;min-height:0;width:100%;padding:28px 16px 14px;}
 
   /* ---------- Fejléc ---------- */
-  header{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+  header{flex:0 0 auto;display:flex;align-items:center;gap:12px;margin-bottom:8px;}
   .logo-mark{width:42px;height:42px;flex:none;display:block;}
   .logo-fallback{width:42px;height:42px;flex:none;}
   .brand{display:flex;flex-direction:column;line-height:1.2;}
@@ -68,9 +71,10 @@
 
   /* ---------- Instrukció ---------- */
   .instruction{
+    flex:0 0 auto;
     text-align:center;
     max-width:480px;
-    margin:14px 0 30px;
+    margin:14px 0 24px;
   }
   .instruction p{
     margin:0;
@@ -92,7 +96,11 @@
   }
 
   /* ---------- Kerék ---------- */
-  .wheel-wrap{position:relative;width:min(78vw,400px);aspect-ratio:1/1;margin-bottom:10px;}
+  /* a wrap kitölti a fejléc és a footer közti teljes szabad teret; */
+  /* a benne lévő négyzet (wheel-square) méretét JS állítja be, hogy pontosan */
+  /* a rendelkezésre álló szélesség/magasság kisebbikét vegye fel (mindig kör marad) */
+  .wheel-wrap{position:relative;flex:1 1 auto;min-height:200px;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 0;}
+  .wheel-square{position:relative;}
   .pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:34px;height:38px;z-index:3;filter:drop-shadow(0 4px 8px rgba(1,40,80,0.35));}
   canvas#wheel{width:100%;height:100%;display:block;border-radius:50%;box-shadow:0 18px 44px rgba(1,40,80,0.28);background:var(--paper);}
   .hub{
@@ -103,6 +111,26 @@
     box-shadow:0 0 0 2px var(--navy), 0 6px 14px rgba(1,40,80,0.4);
     z-index:2;
   }
+
+  /* ---------- QR kód badge — ugyanazon a felületen, mint a kerék, de attól */
+  /* jóval kisebb és alárendelt, a wheel-wrap sarkába illesztve ---------- */
+  .qr-badge{
+    position:absolute;
+    right:14px; bottom:14px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:8px 10px 6px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    box-shadow:0 8px 20px rgba(1,40,80,0.18);
+    z-index:2;
+  }
+  .qr-badge img{width:72px;height:72px;display:block;border-radius:4px;}
+  .qr-badge span{font-family:var(--mono);font-size:9.5px;color:var(--ink-muted);letter-spacing:.02em;}
+  @media (max-width:560px){ .qr-badge{display:none;} }
 
   [aria-live]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
 
@@ -162,6 +190,7 @@
 </head>
 <body>
 <div class="page">
+  <canvas id="bgFx" aria-hidden="true"></canvas>
   <div class="hex-watermark" aria-hidden="true"></div>
 
   <div class="content">
@@ -181,12 +210,18 @@
       <p>Nyomd meg az <kbd>ENTER</kbd> billentyűt a pörgetéshez!</p>
     </div>
 
-    <div class="wheel-wrap">
-      <svg class="pointer" viewBox="0 0 34 38" xmlns="http://www.w3.org/2000/svg">
-        <path d="M17 38 L2 10 Q17 20 32 10 Z" fill="#012850" stroke="#ffffff" stroke-width="1.5"/>
-      </svg>
-      <canvas id="wheel"></canvas>
-      <div class="hub"></div>
+    <div class="wheel-wrap" id="wheelWrap">
+      <div class="wheel-square" id="wheelSquare">
+        <svg class="pointer" viewBox="0 0 34 38" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 38 L2 10 Q17 20 32 10 Z" fill="#012850" stroke="#ffffff" stroke-width="1.5"/>
+        </svg>
+        <canvas id="wheel"></canvas>
+        <div class="hub"></div>
+      </div>
+      <div class="qr-badge">
+        <img id="qrImg" alt="QR kód" width="72" height="72">
+        <span>Olvasd be!</span>
+      </div>
     </div>
   </div>
 
@@ -224,21 +259,32 @@
      KONFIGURÁCIÓ — ide nyúlj, ha testre akarod szabni a kereket
      ========================================================= */
   const PRIZES = [
-    { label: "Arduino kezdőkészlet" },
-    { label: "3D nyomtatás – 1 tekercs PLA" },
-    { label: "Forrasztó szett" },
-    { label: "Mentor konzultáció" },
-    { label: "ESP32 fejlesztőpanel" },
-    { label: "Tech Lab póló" },
-    { label: "Extra labor idő" },
-    { label: "FŐDÍJ: Raspberry Pi 5" }
+    { label: "Sima STL kulcstartó", weight: 10, color: "#012850" },
+    { label: "Toll",                weight: 3,  color: "#ef8354" },
+    { label: "Fidget",              weight: 3,  color: "#2fae8b" },
+    { label: "STL+ kulcstartó",     weight: 3,  color: "#7a5fd1" },
+    { label: "Notesz (fődíj)",      weight: 1,  color: "#d8ac48" }
   ];
+  // weight-arányok: 10:3:3:3:1 = 50% / 15% / 15% / 15% / 5% —
+  // a szeletek mérete pontosan ezt az arányt követi, hogy a kerék
+  // vizuálisan is híven mutassa az esélyeket.
 
-  const SPIN_DURATION_MS   = 5200;   // teljes pörgés hossza
-  const ACCEL_TIME_FRACTION= 0.12;   // az idő ekkora hányada a "felpörgés" (gyorsulás)
-  const ACCEL_DIST_FRACTION= 0.045;  // a felpörgés alatt megtett szögtávolság aránya (valósághűen kicsi)
-  const MIN_EXTRA_TURNS    = 5;      // minimum ennyi teljes kör extra pörgetés
-  const MAX_EXTRA_TURNS    = 8;
+  const SPIN_DURATION_MS = 5200;  // teljes pörgés hossza
+  const MIN_EXTRA_TURNS  = 5;     // minimum ennyi teljes kör extra pörgetés
+  const MAX_EXTRA_TURNS  = 8;
+
+  // QR kód — cseréld a data értéket a saját linkedre (pl. visszajelző űrlap,
+  // Instagram, weboldal). A kép a látogató böngészőjében, a helyszínen
+  // töltődik be, ehhez internetkapcsolat kell (GitHub Pages-en ez adott).
+  const QR_TARGET_URL = "https://forms.gle/replace-with-your-link";
+
+  // A sebességgörbe alakja: v(t) = t^RISE * (1-t)^DECAY, t a 0..1 normált idő.
+  // Kicsi RISE + nagy DECAY = gyors, rövid felpörgés, utána hosszú, sima lassulás
+  // — folytonos görbe, nincs benne "ugrás" a fázisváltásnál (ez okozta korábban
+  // a hirtelen felgyorsulás érzetét). Csökkentsd DECAY-t, ha rövidebb kifutást
+  // szeretnél; növeld, ha még hosszabb, lágyabb lassulást.
+  const EASE_RISE  = 1;
+  const EASE_DECAY = 12;
 
   /* =========================================================
      Canvas előkészítés
@@ -246,12 +292,47 @@
   const canvas = document.getElementById('wheel');
   const ctx = canvas.getContext('2d');
   const N = PRIZES.length;
-  const SEG = 360 / N;
-  const COLORS = ["#012850", "#1a3d61"]; // váltakozó navy árnyalatok
+
+  // szeletek határai fokban, a weight-ek arányában (nem egyenlő osztás!)
+  const TOTAL_WEIGHT = PRIZES.reduce((s,p)=>s+p.weight, 0);
+  const segBounds = [];
+  (function buildSegments(){
+    let acc = 0;
+    for(const p of PRIZES){
+      const start = acc/TOTAL_WEIGHT*360;
+      acc += p.weight;
+      const end = acc/TOTAL_WEIGHT*360;
+      segBounds.push({start, end});
+    }
+  })();
+
+  function pickWeightedIndex(){
+    const r = Math.random()*TOTAL_WEIGHT;
+    let acc = 0;
+    for(let i=0;i<PRIZES.length;i++){
+      acc += PRIZES[i].weight;
+      if(r < acc) return i;
+    }
+    return PRIZES.length-1;
+  }
 
   let rotation = 0;
   let dpr = Math.max(1, window.devicePixelRatio || 1);
   let size = 0;
+
+  const wheelWrap = document.getElementById('wheelWrap');
+  const wheelSquare = document.getElementById('wheelSquare');
+
+  // A wheel-wrap adja a rendelkezésre álló (fejléc és footer közti) teret;
+  // itt vesszük a szélesség/magasság kisebbikét, hogy a kerék mindig
+  // tökéletes kör maradjon, és pont kitöltse ezt a teret.
+  function sizeWheel(){
+    const rect = wheelWrap.getBoundingClientRect();
+    const s = Math.max(160, Math.min(rect.width, rect.height) - 8);
+    wheelSquare.style.width = s + 'px';
+    wheelSquare.style.height = s + 'px';
+    resizeCanvas();
+  }
 
   function resizeCanvas(){
     const rect = canvas.getBoundingClientRect();
@@ -270,25 +351,30 @@
     ctx.rotate(rotation * Math.PI/180);
 
     for(let i=0;i<N;i++){
-      const start = (i*SEG) * Math.PI/180;
-      const end   = ((i+1)*SEG) * Math.PI/180;
+      const start = segBounds[i].start * Math.PI/180;
+      const end   = segBounds[i].end   * Math.PI/180;
+      const angleSpan = end - start;
       ctx.beginPath();
       ctx.moveTo(0,0);
       ctx.arc(0,0,r-4, start, end);
       ctx.closePath();
-      ctx.fillStyle = COLORS[i%2];
+      ctx.fillStyle = PRIZES[i].color;
       ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = "#ffffff";
       ctx.stroke();
 
       ctx.save();
-      ctx.rotate(start + (end-start)/2);
+      ctx.rotate(start + angleSpan/2);
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
       ctx.fillStyle = "#ffffff";
       ctx.font = "600 " + Math.max(10, r*0.062) + "px Inter, sans-serif";
-      wrapRadialText(PRIZES[i].label, r-18, r*0.30);
+      // a szövegtördelés szélessége a szelet szögéhez igazodik: a nagy (50%-os)
+      // szelet kap bőven helyet egy sorban, a keskeny szeletek (pl. 5%) inkább
+      // több, rövidebb sorra törnek
+      const maxWidth = Math.max(24, Math.min(r-18, r*0.75*angleSpan));
+      wrapRadialText(PRIZES[i].label, r-18, maxWidth);
       ctx.restore();
     }
     ctx.restore();
@@ -315,7 +401,127 @@
     });
   }
 
-  window.addEventListener('resize', resizeCanvas);
+  window.addEventListener('resize', sizeWheel);
+  if(window.ResizeObserver){
+    new ResizeObserver(sizeWheel).observe(wheelWrap);
+  }
+
+  /* =========================================================
+     QR kód — kliensoldalon generálva egy ingyenes, kulcs nélküli
+     szolgáltatással, a látogató böngészőjében (internetkapcsolat kell,
+     ami GitHub Pages-en amúgy is adott).
+     ========================================================= */
+  document.getElementById('qrImg').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=1&data=' +
+    encodeURIComponent(QR_TARGET_URL);
+
+  /* =========================================================
+     Háttér-animáció: hulló fogaskerekek és csavarok.
+     Egyszerű canvas-részecskerendszer, könnyű, végtelenített ciklus.
+     ========================================================= */
+  (function backgroundFx(){
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduceMotion) return;
+
+    const fxCanvas = document.getElementById('bgFx');
+    const fxCtx = fxCanvas.getContext('2d');
+    const FX_COLORS = ['#012850','#1a3d61','#4d7ea8','#ef8354','#2fae8b','#d8ac48'];
+    const FX_COUNT = 20;
+    let fxW = 0, fxH = 0;
+
+    function resizeFx(){
+      fxW = window.innerWidth;
+      fxH = window.innerHeight;
+      fxCanvas.width = fxW * dpr;
+      fxCanvas.height = fxH * dpr;
+      fxCanvas.style.width = fxW + 'px';
+      fxCanvas.style.height = fxH + 'px';
+      fxCtx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    window.addEventListener('resize', resizeFx);
+    resizeFx();
+
+    function rand(min,max){ return min + Math.random()*(max-min); }
+
+    function spawnParticle(spreadOverScreen){
+      return {
+        type: Math.random() < 0.55 ? 'gear' : 'screw',
+        x: rand(0, fxW),
+        y: spreadOverScreen ? rand(-fxH, fxH) : rand(-90, -20),
+        size: rand(12, 30),
+        vy: rand(16, 40),
+        rot: rand(0, Math.PI*2),
+        vr: (Math.random()<0.5?-1:1) * rand(0.25, 1.0),
+        color: FX_COLORS[Math.floor(Math.random()*FX_COLORS.length)],
+        alpha: rand(0.16, 0.36)
+      };
+    }
+
+    const particles = Array.from({length: FX_COUNT}, () => spawnParticle(true));
+
+    function drawGear(c, size, color, alpha){
+      const teeth = 8;
+      c.save();
+      c.globalAlpha = alpha;
+      c.fillStyle = color;
+      c.beginPath();
+      c.arc(0,0,size*0.72,0,Math.PI*2);
+      c.fill();
+      for(let i=0;i<teeth;i++){
+        c.save();
+        c.rotate((i/teeth)*Math.PI*2);
+        c.fillRect(-size*0.14, -size*1.0, size*0.28, size*0.34);
+        c.restore();
+      }
+      c.globalCompositeOperation = 'destination-out';
+      c.beginPath();
+      c.arc(0,0,size*0.26,0,Math.PI*2);
+      c.fill();
+      c.restore();
+    }
+
+    function drawScrew(c, size, color, alpha){
+      c.save();
+      c.globalAlpha = alpha;
+      c.fillStyle = color;
+      c.beginPath();
+      for(let i=0;i<6;i++){
+        const a = i/6*Math.PI*2;
+        const px = Math.cos(a)*size*0.62, py = Math.sin(a)*size*0.62;
+        if(i===0) c.moveTo(px,py); else c.lineTo(px,py);
+      }
+      c.closePath();
+      c.fill();
+      c.globalCompositeOperation = 'destination-out';
+      c.globalAlpha = alpha*0.5;
+      c.beginPath();
+      c.arc(0,0,size*0.16,0,Math.PI*2);
+      c.fill();
+      c.restore();
+    }
+
+    let lastT = performance.now();
+    function loop(now){
+      const dt = Math.min(0.05, (now-lastT)/1000);
+      lastT = now;
+      fxCtx.clearRect(0,0,fxW,fxH);
+      for(const p of particles){
+        p.y += p.vy*dt;
+        p.rot += p.vr*dt;
+        if(p.y - p.size > fxH){
+          Object.assign(p, spawnParticle(false));
+        }
+        fxCtx.save();
+        fxCtx.translate(p.x, p.y);
+        fxCtx.rotate(p.rot);
+        if(p.type === 'gear') drawGear(fxCtx, p.size, p.color, p.alpha);
+        else drawScrew(fxCtx, p.size, p.color, p.alpha);
+        fxCtx.restore();
+      }
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  })();
 
   /* =========================================================
      Hangeffektek — Web Audio API-val szintetizálva, külső
@@ -373,23 +579,58 @@
   let rafId = null;
   let lastTickSeg = null;
 
-  function spinEase(t){
-    if(t <= ACCEL_TIME_FRACTION){
-      const local = t / ACCEL_TIME_FRACTION;
-      return ACCEL_DIST_FRACTION * (local*local);
-    } else {
-      const local = (t - ACCEL_TIME_FRACTION) / (1 - ACCEL_TIME_FRACTION);
-      const decel = 1 - Math.pow(1-local, 4);
-      return ACCEL_DIST_FRACTION + (1-ACCEL_DIST_FRACTION) * decel;
+  // Előre kiszámított táblázat: a v(t)=t^RISE*(1-t)^DECAY sebességgörbe
+  // numerikus integrálja (trapéz-szabály), normálva 0..1 közé. Ebből
+  // interpolálva kapjuk a forgás arányát (pozíció) és a pillanatnyi
+  // sebességet is (utóbbi a kattogás hangerejéhez kell).
+  const EASE_SAMPLES = 480;
+  const easeVelocity = new Array(EASE_SAMPLES+1);
+  const easePosition = new Array(EASE_SAMPLES+1);
+  (function buildEaseTable(){
+    let maxV = 0;
+    for(let i=0;i<=EASE_SAMPLES;i++){
+      const t = i/EASE_SAMPLES;
+      const v = Math.pow(t, EASE_RISE) * Math.pow(1-t, EASE_DECAY);
+      easeVelocity[i] = v;
+      if(v > maxV) maxV = v;
     }
+    for(let i=0;i<=EASE_SAMPLES;i++) easeVelocity[i] /= maxV; // 0..1, csak a hangerőhöz
+
+    let cum = 0;
+    const raw = new Array(EASE_SAMPLES+1);
+    raw[0] = 0;
+    for(let i=1;i<=EASE_SAMPLES;i++){
+      const t = i/EASE_SAMPLES;
+      const v = Math.pow(t, EASE_RISE) * Math.pow(1-t, EASE_DECAY);
+      const vPrev = Math.pow((i-1)/EASE_SAMPLES, EASE_RISE) * Math.pow(1-(i-1)/EASE_SAMPLES, EASE_DECAY);
+      cum += (v + vPrev) / 2 / EASE_SAMPLES;
+      raw[i] = cum;
+    }
+    const total = raw[EASE_SAMPLES];
+    for(let i=0;i<=EASE_SAMPLES;i++) easePosition[i] = raw[i] / total;
+  })();
+
+  function lookup(table, t){
+    const pos = Math.max(0, Math.min(1, t)) * EASE_SAMPLES;
+    const i0 = Math.floor(pos);
+    const i1 = Math.min(EASE_SAMPLES, i0+1);
+    const frac = pos - i0;
+    return table[i0]*(1-frac) + table[i1]*frac;
   }
+
+  function spinEase(t){ return lookup(easePosition, t); }
+  function spinVelocity(t){ return lookup(easeVelocity, t); }
 
   function pointerLocalAngle(rot){
     return ((270 - rot) % 360 + 360) % 360;
   }
 
   function currentSegmentIndex(rot){
-    return Math.floor(pointerLocalAngle(rot) / SEG) % N;
+    const angle = pointerLocalAngle(rot);
+    for(let i=0;i<N;i++){
+      if(angle >= segBounds[i].start && angle < segBounds[i].end) return i;
+    }
+    return N-1;
   }
 
   function spin(){
@@ -398,9 +639,11 @@
     state = 'spinning';
     liveRegion.textContent = 'A kerék pörög…';
 
-    const targetIndex = Math.floor(Math.random()*N);
-    const jitter = (Math.random()-0.5) * SEG * 0.6;
-    const desiredLocal = targetIndex*SEG + SEG/2 + jitter;
+    const targetIndex = pickWeightedIndex();
+    const seg = segBounds[targetIndex];
+    const segWidth = seg.end - seg.start;
+    const jitter = (Math.random()-0.5) * segWidth * 0.6;
+    const desiredLocal = seg.start + segWidth/2 + jitter;
 
     const wantedMod = ((270 - desiredLocal) % 360 + 360) % 360;
     const currentMod = ((rotation % 360) + 360) % 360;
@@ -419,11 +662,10 @@
       rotation = startRotation + totalDelta*eased;
       drawWheel();
 
-      const seg = currentSegmentIndex(rotation);
-      if(seg !== lastTickSeg){
-        const velocity = 1 - Math.abs(t-ACCEL_TIME_FRACTION);
-        playTick(Math.max(0, Math.min(1, velocity)));
-        lastTickSeg = seg;
+      const seg2 = currentSegmentIndex(rotation);
+      if(seg2 !== lastTickSeg){
+        playTick(spinVelocity(t));
+        lastTickSeg = seg2;
       }
 
       if(t < 1 && state === 'spinning'){
@@ -466,7 +708,7 @@
     }
   });
 
-  resizeCanvas();
+  sizeWheel();
 })();
 </script>
 </body>
