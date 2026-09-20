@@ -45,7 +45,7 @@
 
   .page{position:relative;min-height:100svh;display:flex;flex-direction:column;}
 
-  /* háttérben hulló fogaskerekek/csavarok — figyelemfelkeltő, folyamatosan mozgó elem */
+  /* háttérben lebegő, forgó logó — figyelemfelkeltő, folyamatosan mozgó elem */
   #bgFx{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;display:block;}
 
   /* halvány, ismétlődő logó-vízjel — a valós logo.png fájlból épül fel majd */
@@ -66,7 +66,6 @@
   .logo-mark{width:42px;height:42px;flex:none;display:block;}
   .logo-fallback{width:42px;height:42px;flex:none;}
   .brand{display:flex;flex-direction:column;line-height:1.2;}
-  .brand .uni{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--navy-soft);}
   .brand .lab{font-family:var(--sans);font-weight:800;font-size:19px;color:var(--navy);}
 
   /* ---------- Instrukció ---------- */
@@ -113,23 +112,25 @@
   }
 
   /* ---------- QR kód badge — ugyanazon a felületen, mint a kerék, de attól */
-  /* jóval kisebb és alárendelt, a wheel-wrap sarkába illesztve ---------- */
+  /* jóval kisebb és alárendelt; a kép jobb felének közepén, horizontálisan */
+  /* középre igazítva (a függőleges pozíció változatlan) ---------- */
   .qr-badge{
     position:absolute;
-    right:14px; bottom:14px;
+    left:75%; bottom:14px;
+    transform:translateX(-50%);
     background:var(--paper);
     border:1px solid var(--line);
-    border-radius:12px;
-    padding:8px 10px 6px;
+    border-radius:14px;
+    padding:10px 14px 8px;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:4px;
+    gap:5px;
     box-shadow:0 8px 20px rgba(1,40,80,0.18);
     z-index:2;
   }
-  .qr-badge img{width:72px;height:72px;display:block;border-radius:4px;}
-  .qr-badge span{font-family:var(--mono);font-size:9.5px;color:var(--ink-muted);letter-spacing:.02em;}
+  .qr-badge img{width:144px;height:144px;display:block;border-radius:6px;}
+  .qr-badge span{font-family:var(--mono);font-size:11px;color:var(--ink-muted);letter-spacing:.02em;}
   @media (max-width:560px){ .qr-badge{display:none;} }
 
   [aria-live]{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
@@ -138,7 +139,7 @@
   .overlay{
     position:fixed;inset:0;background:rgba(1,40,80,0.35);backdrop-filter:blur(4px);
     display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;
-    transition:opacity .25s ease;z-index:10;padding:20px;
+    transition:opacity .12s ease;z-index:10;padding:20px;
   }
   .overlay.show{opacity:1;pointer-events:auto;}
   .prize-card{
@@ -150,7 +151,7 @@
     text-align:center;
     box-shadow:0 30px 70px rgba(1,40,80,0.35);
     transform:scale(.86) translateY(14px);
-    transition:transform .32s cubic-bezier(.2,1.4,.4,1);
+    transition:transform .16s cubic-bezier(.2,1.4,.4,1);
   }
   .overlay.show .prize-card{transform:scale(1) translateY(0);}
   .prize-card .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--navy-soft);margin-bottom:10px;}
@@ -160,23 +161,6 @@
 
   /* ---------- Footer (a Student Tech Lab honlap stílusa) ---------- */
   footer.site-footer{position:relative;z-index:1;margin-top:auto;}
-  .contact{padding:56px 20px 46px;text-align:center;}
-  .contact h2{
-    font-family:var(--sans);
-    font-weight:800;
-    font-size:24px;
-    letter-spacing:.02em;
-    color:var(--navy);
-    margin:0 0 14px;
-  }
-  .contact .rule{width:min(70%,560px);height:2px;background:var(--navy);margin:0 auto 26px;opacity:.85;}
-  .contact .email{font-size:15px;color:var(--ink-muted);margin-bottom:14px;}
-  .contact .email a{color:var(--navy);font-weight:700;text-decoration:none;}
-  .contact .email a:hover{text-decoration:underline;}
-  .socials{font-size:15px;font-weight:700;}
-  .socials a{color:var(--navy);text-decoration:none;}
-  .socials a:hover{text-decoration:underline;}
-  .socials .sep{color:var(--ink-muted);margin:0 10px;font-weight:400;}
   .copy-bar{background:var(--navy-mid);color:#eef3f8;text-align:center;padding:18px 16px;font-size:14px;}
 
   a:focus-visible, kbd:focus-visible{outline:2px solid var(--navy-soft);outline-offset:2px;}
@@ -184,7 +168,6 @@
   @media (max-width:480px){
     .brand .lab{font-size:16px;}
     .instruction p{font-size:17px;}
-    .contact h2{font-size:20px;}
   }
 </style>
 </head>
@@ -201,7 +184,6 @@
         <polygon points="50,4 92,27 92,73 50,96 8,73 8,27" fill="none" stroke="#012850" stroke-width="4"/>
       </svg>
       <div class="brand">
-        <span class="uni">ELTE · SAVARIA</span>
         <span class="lab">Student Tech Lab</span>
       </div>
     </header>
@@ -219,7 +201,7 @@
         <div class="hub"></div>
       </div>
       <div class="qr-badge">
-        <img id="qrImg" alt="QR kód" width="72" height="72">
+        <img id="qrImg" alt="QR kód" width="144" height="144">
         <span>Olvasd be!</span>
       </div>
     </div>
@@ -236,15 +218,6 @@
   </div>
 
   <footer class="site-footer">
-    <div class="contact">
-      <h2>KAPCSOLAT</h2>
-      <div class="rule"></div>
-      <div class="email">Email: <a href="mailto:studenttechlab@inf.elte.hu">studenttechlab@inf.elte.hu</a></div>
-      <div class="socials">
-        <!-- cseréld a # jeleket a valódi profil-linkekre -->
-        <a href="#">Facebook</a><span class="sep">|</span><a href="#">Instagram</a><span class="sep">|</span><a href="#">YouTube</a>
-      </div>
-    </div>
     <div class="copy-bar">© <span id="year"></span> Student Tech Lab ELTE.</div>
   </footer>
 </div>
@@ -343,6 +316,15 @@
     drawWheel();
   }
 
+  function pickTextColor(hex){
+    // olvasható szövegszín (fehér vagy navy) a szelet háttérszínéhez, kontraszt alapján —
+    // ez javítja azt, hogy pl. az arany "Notesz" szeleten a fehér szöveg alig látszott
+    const c = hex.replace('#','');
+    const r = parseInt(c.substring(0,2),16), g = parseInt(c.substring(2,4),16), b = parseInt(c.substring(4,6),16);
+    const lum = (0.299*r + 0.587*g + 0.114*b) / 255;
+    return lum > 0.6 ? '#012850' : '#ffffff';
+  }
+
   function drawWheel(){
     const r = size/2;
     ctx.clearRect(0,0,size,size);
@@ -368,7 +350,7 @@
       ctx.rotate(start + angleSpan/2);
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = pickTextColor(PRIZES[i].color);
       ctx.font = "600 " + Math.max(10, r*0.062) + "px Inter, sans-serif";
       // a szövegtördelés szélessége a szelet szögéhez igazodik: a nagy (50%-os)
       // szelet kap bőven helyet egy sorban, a keskeny szeletek (pl. 5%) inkább
@@ -412,12 +394,13 @@
      ami GitHub Pages-en amúgy is adott).
      ========================================================= */
   document.getElementById('qrImg').src =
-    'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=1&data=' +
+    'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=1&data=' +
     encodeURIComponent(QR_TARGET_URL);
 
   /* =========================================================
-     Háttér-animáció: hulló fogaskerekek és csavarok.
-     Egyszerű canvas-részecskerendszer, könnyű, végtelenített ciklus.
+     Háttér-animáció: a logo.png lebeg és forog a háttérben.
+     Amíg nincs feltöltve a logo.png, egy egyszerű hatszög-körvonal
+     helyettesíti (ugyanaz a helyettesítő jel, mint a fejlécben).
      ========================================================= */
   (function backgroundFx(){
     const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -425,9 +408,18 @@
 
     const fxCanvas = document.getElementById('bgFx');
     const fxCtx = fxCanvas.getContext('2d');
-    const FX_COLORS = ['#012850','#1a3d61','#4d7ea8','#ef8354','#2fae8b','#d8ac48'];
-    const FX_COUNT = 20;
+    const FX_COUNT = 16;
     let fxW = 0, fxH = 0;
+
+    const bgLogo = new Image();
+    let bgLogoLoaded = false;
+    let bgLogoAspect = 1;
+    bgLogo.onload = function(){
+      bgLogoLoaded = true;
+      bgLogoAspect = (bgLogo.naturalWidth / bgLogo.naturalHeight) || 1;
+    };
+    bgLogo.onerror = function(){ bgLogoLoaded = false; };
+    bgLogo.src = 'logo.png';
 
     function resizeFx(){
       fxW = window.innerWidth;
@@ -445,58 +437,37 @@
 
     function spawnParticle(spreadOverScreen){
       return {
-        type: Math.random() < 0.55 ? 'gear' : 'screw',
         x: rand(0, fxW),
         y: spreadOverScreen ? rand(-fxH, fxH) : rand(-90, -20),
-        size: rand(12, 30),
-        vy: rand(16, 40),
+        size: rand(26, 58),
+        vy: rand(14, 34),
         rot: rand(0, Math.PI*2),
-        vr: (Math.random()<0.5?-1:1) * rand(0.25, 1.0),
-        color: FX_COLORS[Math.floor(Math.random()*FX_COLORS.length)],
-        alpha: rand(0.16, 0.36)
+        vr: (Math.random()<0.5?-1:1) * rand(0.2, 0.8),
+        alpha: rand(0.14, 0.30)
       };
     }
 
     const particles = Array.from({length: FX_COUNT}, () => spawnParticle(true));
 
-    function drawGear(c, size, color, alpha){
-      const teeth = 8;
+    function drawLogoParticle(c, size, alpha){
       c.save();
       c.globalAlpha = alpha;
-      c.fillStyle = color;
-      c.beginPath();
-      c.arc(0,0,size*0.72,0,Math.PI*2);
-      c.fill();
-      for(let i=0;i<teeth;i++){
-        c.save();
-        c.rotate((i/teeth)*Math.PI*2);
-        c.fillRect(-size*0.14, -size*1.0, size*0.28, size*0.34);
-        c.restore();
+      if(bgLogoLoaded){
+        let w = size, h = size;
+        if(bgLogoAspect >= 1){ h = size / bgLogoAspect; } else { w = size * bgLogoAspect; }
+        c.drawImage(bgLogo, -w/2, -h/2, w, h);
+      } else {
+        c.strokeStyle = '#012850';
+        c.lineWidth = Math.max(1.5, size*0.06);
+        c.beginPath();
+        const pts = [[0,-1],[0.87,-0.5],[0.87,0.5],[0,1],[-0.87,0.5],[-0.87,-0.5]];
+        pts.forEach(function(p,i){
+          const x = p[0]*size*0.5, y = p[1]*size*0.5;
+          if(i===0) c.moveTo(x,y); else c.lineTo(x,y);
+        });
+        c.closePath();
+        c.stroke();
       }
-      c.globalCompositeOperation = 'destination-out';
-      c.beginPath();
-      c.arc(0,0,size*0.26,0,Math.PI*2);
-      c.fill();
-      c.restore();
-    }
-
-    function drawScrew(c, size, color, alpha){
-      c.save();
-      c.globalAlpha = alpha;
-      c.fillStyle = color;
-      c.beginPath();
-      for(let i=0;i<6;i++){
-        const a = i/6*Math.PI*2;
-        const px = Math.cos(a)*size*0.62, py = Math.sin(a)*size*0.62;
-        if(i===0) c.moveTo(px,py); else c.lineTo(px,py);
-      }
-      c.closePath();
-      c.fill();
-      c.globalCompositeOperation = 'destination-out';
-      c.globalAlpha = alpha*0.5;
-      c.beginPath();
-      c.arc(0,0,size*0.16,0,Math.PI*2);
-      c.fill();
       c.restore();
     }
 
@@ -514,8 +485,7 @@
         fxCtx.save();
         fxCtx.translate(p.x, p.y);
         fxCtx.rotate(p.rot);
-        if(p.type === 'gear') drawGear(fxCtx, p.size, p.color, p.alpha);
-        else drawScrew(fxCtx, p.size, p.color, p.alpha);
+        drawLogoParticle(fxCtx, p.size, p.alpha);
         fxCtx.restore();
       }
       requestAnimationFrame(loop);
