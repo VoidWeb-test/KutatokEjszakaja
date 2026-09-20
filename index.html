@@ -6,12 +6,6 @@
 <title>Szerencsekerék · Student Tech Lab ELTE</title>
 <meta name="description" content="Interaktív szerencsekerék a Student Tech Lab ELTE nyílt napjára.">
 
-<!--
-  LOGÓ: tedd az index.html mellé egy "logo.png" nevű, lehetőleg átlátszó hátterű
-  fájlt — ez adja majd a böngészőfül ikonját, a fejléc logóját ÉS a háttérben
-  megjelenő halvány hatszög-mintát is. Amíg nincs feltöltve a fájl, a fejlécben
-  egy egyszerű helyettesítő hatszög jel látszik, a vízjel-minta pedig üres marad.
--->
 <link rel="icon" type="image/png" href="logo.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,10 +39,8 @@
 
   .page{position:relative;min-height:100svh;display:flex;flex-direction:column;}
 
-  /* háttérben lebegő, forgó logó — figyelemfelkeltő, folyamatosan mozgó elem */
   #bgFx{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none;display:block;}
 
-  /* halvány, ismétlődő logó-vízjel — a valós logo.png fájlból épül fel majd */
   .hex-watermark{
     position:absolute; inset:0;
     background-image:url('logo.png');
@@ -94,10 +86,6 @@
     display:inline-block;
   }
 
-  /* ---------- Kerék ---------- */
-  /* a wrap kitölti a fejléc és a footer közti teljes szabad teret; */
-  /* a benne lévő négyzet (wheel-square) méretét JS állítja be, hogy pontosan */
-  /* a rendelkezésre álló szélesség/magasság kisebbikét vegye fel (mindig kör marad) */
   .wheel-wrap{position:relative;flex:1 1 auto;min-height:200px;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 0;}
   .wheel-square{position:relative;}
   .pointer{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:34px;height:38px;z-index:3;filter:drop-shadow(0 4px 8px rgba(1,40,80,0.35));}
@@ -111,9 +99,6 @@
     z-index:2;
   }
 
-  /* ---------- QR kód badge — ugyanazon a felületen, mint a kerék, de attól */
-  /* jóval kisebb és alárendelt; a kép jobb felének közepén, horizontálisan */
-  /* középre igazítva (a függőleges pozíció változatlan) ---------- */
   .qr-badge{
     position:absolute;
     left:75%; bottom:14px;
@@ -238,24 +223,14 @@
     { label: "STL+ kulcstartó",     weight: 3,  color: "#7a5fd1" },
     { label: "Notesz (fődíj)",      weight: 1,  color: "#d8ac48" }
   ];
-  // weight-arányok: 10:3:3:3:1 = 50% / 15% / 15% / 15% / 5% —
-  // a szeletek mérete pontosan ezt az arányt követi, hogy a kerék
-  // vizuálisan is híven mutassa az esélyeket.
+  // weight-arányok: 10:3:3:3:1 = 50% / 15% / 15% / 15% / 5% 
 
   const SPIN_DURATION_MS = 5200;  // teljes pörgés hossza
   const MIN_EXTRA_TURNS  = 5;     // minimum ennyi teljes kör extra pörgetés
   const MAX_EXTRA_TURNS  = 8;
 
-  // QR kód — cseréld a data értéket a saját linkedre (pl. visszajelző űrlap,
-  // Instagram, weboldal). A kép a látogató böngészőjében, a helyszínen
-  // töltődik be, ehhez internetkapcsolat kell (GitHub Pages-en ez adott).
-  const QR_TARGET_URL = "https://forms.gle/replace-with-your-link";
+  const QR_TARGET_URL = "https://forms.gle/https://studenttechlab.hu/";
 
-  // A sebességgörbe alakja: v(t) = t^RISE * (1-t)^DECAY, t a 0..1 normált idő.
-  // Kicsi RISE + nagy DECAY = gyors, rövid felpörgés, utána hosszú, sima lassulás
-  // — folytonos görbe, nincs benne "ugrás" a fázisváltásnál (ez okozta korábban
-  // a hirtelen felgyorsulás érzetét). Csökkentsd DECAY-t, ha rövidebb kifutást
-  // szeretnél; növeld, ha még hosszabb, lágyabb lassulást.
   const EASE_RISE  = 1;
   const EASE_DECAY = 12;
 
