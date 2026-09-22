@@ -250,18 +250,30 @@
   const N = PRIZES.length;
 
   // szeletek határai fokban, a weight-ek arányában (nem egyenlő osztás!)
+  //const TOTAL_WEIGHT = PRIZES.reduce((s,p)=>s+p.weight, 0);
+ // const segBounds = [];
+ // (function buildSegments(){
+  //  let acc = 0;
+  //  for(const p of PRIZES){
+   //   const start = acc/TOTAL_WEIGHT*360;
+   //   acc += p.weight;
+   //   const end = acc/TOTAL_WEIGHT*360;
+    //  segBounds.push({start, end});
+  //  }
+ // })();
+// Szeletek határai fokban: vizuálisan egyenlő cikkekre osztva (360 / N),
+  // míg a nyerési esélyek (weight) maradnak a PRIZES tömbben megadottak.
   const TOTAL_WEIGHT = PRIZES.reduce((s,p)=>s+p.weight, 0);
   const segBounds = [];
   (function buildSegments(){
-    let acc = 0;
-    for(const p of PRIZES){
-      const start = acc/TOTAL_WEIGHT*360;
-      acc += p.weight;
-      const end = acc/TOTAL_WEIGHT*360;
+    const sliceAngle = 360 / N;
+    for(let i = 0; i < N; i++){
+      const start = i * sliceAngle;
+      const end = (i + 1) * sliceAngle;
       segBounds.push({start, end});
     }
   })();
-
+  
   function pickWeightedIndex(){
     const r = Math.random()*TOTAL_WEIGHT;
     let acc = 0;
